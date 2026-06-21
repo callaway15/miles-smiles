@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Miles&Smiles → Star Alliance Gold Tracker</title>
+<style>
+  :root{
+    --tk-red:#c70a2c; --tk-dark:#1a1a2e; --gold:#c9a227; --silver:#9aa3ad;
+    --bg:#0f1226; --card:#171a35; --card2:#1f2347; --line:#2c3160;
+    --txt:#eef0ff; --muted:#9aa0c5; --good:#2ecc71; --accent:#3a6df0;
+    --radius:14px; --shadow:0 6px 24px rgba(0,0,0,.35);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:linear-gradient(160deg,#0c0f24,#141738 60%,#0c0f24);color:var(--txt);min-height:100vh;font-size:15px}
+  header{padding:18px 20px;background:linear-gradient(90deg,var(--tk-red),#7a0a30);box-shadow:var(--shadow);position:sticky;top:0;z-index:50}
+  header h1{margin:0;font-size:19px;letter-spacing:.3px}
+  header .sub{font-size:12px;opacity:.85;margin-top:2px}
+  .wrap{max-width:1040px;margin:0 auto;padding:18px}
+  .row{display:flex;gap:14px;flex-wrap:wrap}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
+  .card h2{margin:0 0 12px;font-size:16px}
+  .card h3{margin:14px 0 8px;font-size:14px;color:var(--muted)}
+  label{display:block;font-size:12px;color:var(--muted);margin:8px 0 4px}
+  input,select,button{font:inherit}
+  input,select{width:100%;padding:9px 10px;background:var(--card2);border:1px solid var(--line);border-radius:10px;color:var(--txt)}
+  input:focus,select:focus{outline:2px solid var(--accent);border-color:var(--accent)}
+  button{cursor:pointer;border:none;border-radius:10px;padding:10px 14px;background:var(--accent);color:#fff;font-weight:600}
+  button.secondary{background:var(--card2);border:1px solid var(--line);color:var(--txt)}
+  button.danger{background:#3a1320;border:1px solid #6e2235;color:#ff9aa9}
+  button.small{padding:6px 10px;font-size:13px}
+  button:hover{filter:brightness(1.08)}
+  .pill{display:inline-block;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:600}
+  .pill.gold{background:rgba(201,162,39,.18);color:var(--gold);border:1px solid var(--gold)}
+  .pill.silver{background:rgba(154,163,173,.16);color:var(--silver);border:1px solid var(--silver)}
+  .pill.warn{background:rgba(255,160,80,.14);color:#ffae5c;border:1px solid #7a4a1c}
+  .pill.ok{background:rgba(46,204,113,.14);color:var(--good);border:1px solid #1e6e44}
+  .tabs{display:flex;gap:6px;flex-wrap:wrap;margin:16px 0}
+  .tabs button{background:var(--card2);border:1px solid var(--line);color:var(--muted);font-weight:600}
+  .tabs button.active{background:var(--tk-red);color:#fff;border-color:var(--tk-red)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  @media(max-width:760px){.grid2,.grid3{grid-template-columns:1fr}}
+  .stat{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:12px}
+  .stat .n{font-size:22px;font-weight:700}
+  .stat .l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+  .bar{position:relative;height:30px;background:var(--card2);border:1px solid var(--line);border-radius:999px;overflow:hidden;margin:10px 0}
+  .bar .fill{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#2ecc71,var(--gold));border-radius:999px;transition:width .4s}
+  .bar .mark{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--silver)}
+  .bar .mark span{position:absolute;top:-18px;left:-18px;font-size:10px;color:var(--silver);white-space:nowrap}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line)}
+  th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.4px}
+  tr:hover td{background:rgba(255,255,255,.02)}
+  .muted{color:var(--muted)}
+  .right{text-align:right}
+  .preview{background:var(--card2);border:1px dashed var(--accent);border-radius:12px;padding:14px;margin-top:10px}
+  .preview .big{font-size:26px;font-weight:800;color:var(--gold)}
+  .note{font-size:12px;color:var(--muted);line-height:1.5}
+  .banner{background:rgba(255,160,80,.10);border:1px solid #7a4a1c;border-radius:10px;padding:10px 12px;font-size:12px;color:#ffce9c;margin-bottom:12px}
+  .profilebar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}
+  .profilebar .who{display:flex;gap:6px;flex-wrap:wrap}
+  .profilebar .who button{background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.25);color:#fff}
+  .profilebar .who button.active{background:#fff;color:var(--tk-red)}
+  .hide{display:none}
+  a{color:#8fb0ff}
+  .inline{display:flex;gap:8px;align-items:center}
+  .inline>*{margin:0}
+  .tag{font-size:11px;padding:2px 7px;border-radius:6px;background:var(--card2);border:1px solid var(--line);color:var(--muted)}
+  .editrow td{padding:5px 6px}
+  .editrow input{padding:6px 7px}
+  details summary{cursor:pointer;font-weight:600;padding:8px 0}
+</style>
+</head>
+<body>
+<header>
+  <h1>✈️ Miles&Smiles → Star Alliance Gold Tracker</h1>
+  <div class="sub">Track each traveller's road to Turkish Airlines <b>Elite</b> (Star Alliance Gold) · 40,000 status miles</div>
+  <div class="profilebar">
+    <span style="font-size:12px;opacity:.85">Traveller:</span>
+    <div class="who" id="profileButtons"></div>
+    <button class="small" id="addProfileBtn" style="background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);color:#fff">+ Add</button>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="tabs" id="tabs">
+    <button data-tab="dashboard" class="active">Dashboard</button>
+    <button data-tab="add">Add a flight</button>
+    <button data-tab="log">Flight log</button>
+    <button data-tab="compare">Compare</button>
+    <button data-tab="planner">Gold planner</button>
+    <button data-tab="tables">Earning tables</button>
+    <button data-tab="backup">Backup &amp; settings</button>
+  </div>
+
+  <!-- DASHBOARD -->
+  <section id="tab-dashboard">
+    <div class="card">
+      <h2 id="dashTitle">Dashboard</h2>
+      <div id="goldBar"></div>
+      <div class="grid3" id="dashStats" style="margin-top:14px"></div>
+      <div class="note" style="margin-top:12px" id="dashWindow"></div>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <h2>What a flight would do</h2>
+      <p class="note">Quick what-if for the current traveller — see the impact before you book, without saving. (Full form under “Add a flight”.)</p>
+      <button class="secondary small" onclick="go('add')">Open flight calculator →</button>
+    </div>
+  </section>
+
+  <!-- ADD FLIGHT -->
+  <section id="tab-add" class="hide">
+    <div class="card">
+      <h2>Add a flight <span class="muted" id="addForWho"></span></h2>
+      <div class="grid2">
+        <div>
+          <label>Airline (operating / earning chart)</label>
+          <select id="f_airline"></select>
+        </div>
+        <div>
+          <label>Date</label>
+          <input type="date" id="f_date">
+        </div>
+      </div>
+      <div class="grid3">
+        <div>
+          <label>From (airport)</label>
+          <input list="airportList" id="f_from" placeholder="e.g. IST" autocomplete="off">
+        </div>
+        <div>
+          <label>To (airport)</label>
+          <input list="airportList" id="f_to" placeholder="e.g. FRA" autocomplete="off">
+        </div>
+        <div>
+          <label>Distance (statute miles)</label>
+          <input type="number" id="f_dist" placeholder="auto / override" min="0">
+        </div>
+      </div>
+      <datalist id="airportList"></datalist>
+      <div class="grid2">
+        <div>
+          <label>Cabin &amp; booking (fare) class</label>
+          <select id="f_class"></select>
+        </div>
+        <div>
+          <label>Round trip?</label>
+          <select id="f_rt"><option value="1">One way</option><option value="2">Round trip (×2)</option></select>
+        </div>
+      </div>
+
+      <div class="preview" id="preview"></div>
+
+      <div class="inline" style="margin-top:12px;flex-wrap:wrap">
+        <button id="addFlightBtn">＋ Add to log now</button>
+        <button class="secondary" id="addSegBtn">＋ Add as trip segment</button>
+        <button class="secondary" onclick="go('dashboard')">Done</button>
+      </div>
+      <p class="note" id="classNote" style="margin-top:10px"></p>
+
+      <div id="tripDraftBox" class="hide" style="margin-top:14px">
+        <h3>Trip / itinerary being built</h3>
+        <p class="note">Build a multi-leg trip (e.g. IST→FRA→JFK→FRA→IST), see the combined effect, then log it all at once.</p>
+        <div style="overflow-x:auto"><table id="tripDraftTable"></table></div>
+        <div class="inline" style="margin-top:10px">
+          <button id="logTripBtn">✅ Log entire trip</button>
+          <button class="secondary small" id="clearTripBtn">Clear trip</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- LOG -->
+  <section id="tab-log" class="hide">
+    <div class="card">
+      <h2 id="logTitle">Flight log</h2>
+      <div style="overflow-x:auto">
+        <table id="logTable"></table>
+      </div>
+    </div>
+  </section>
+
+  <!-- COMPARE -->
+  <section id="tab-compare" class="hide">
+    <div class="card">
+      <h2>Everyone's road to Gold</h2>
+      <div id="compareBody"></div>
+    </div>
+  </section>
+
+  <!-- PLANNER -->
+  <section id="tab-planner" class="hide">
+    <div class="card">
+      <h2 id="planTitle">Gold planner</h2>
+      <div id="planStats" class="grid3"></div>
+      <div class="note" style="margin-top:12px" id="planPace"></div>
+      <div class="grid2" style="margin-top:10px">
+        <div><label>Target date (default: end of membership year)</label><input type="date" id="pl_target"></div>
+        <div><label>Goal</label><select id="pl_goal"><option value="gold">Gold / Elite</option><option value="silver">Silver / Classic Plus</option></select></div>
+      </div>
+      <div id="planRequired" class="preview" style="margin-top:12px"></div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <h2>How many of THIS flight would I need?</h2>
+      <p class="note">Pick a typical route &amp; class to see how many round trips cover what's left to your goal.</p>
+      <div class="grid3">
+        <div><label>Airline</label><select id="pl_airline"></select></div>
+        <div><label>From</label><input list="airportList" id="pl_from" placeholder="IST" autocomplete="off"></div>
+        <div><label>To</label><input list="airportList" id="pl_to" placeholder="JFK" autocomplete="off"></div>
+      </div>
+      <div class="grid2">
+        <div><label>Cabin &amp; booking class</label><select id="pl_class"></select></div>
+        <div><label>Distance (override)</label><input type="number" id="pl_dist" min="0" placeholder="auto"></div>
+      </div>
+      <div class="preview" id="planFlights" style="margin-top:12px"></div>
+    </div>
+  </section>
+
+  <!-- TABLES -->
+  <section id="tab-tables" class="hide">
+    <div class="card">
+      <h2>Earning tables (editable)</h2>
+      <div class="banner">⚠️ Seeded percentages are <b>starting values</b>. Turkish publishes the exact %% per booking class for each airline — confirm/edit a row the first time you use it. Official page:
+        <a href="https://www.turkishairlines.com/en-int/miles-and-smiles/earning-miles/earn-miles-on-flights/" target="_blank" rel="noopener">Earn miles as you fly →</a></div>
+      <div class="inline">
+        <select id="t_airline" style="max-width:340px"></select>
+        <button class="small secondary" id="resetAirlineBtn">Reset this airline to default</button>
+        <button class="small secondary" id="addAirlineBtn">+ New airline</button>
+      </div>
+      <div id="tableEditor" style="margin-top:12px"></div>
+    </div>
+  </section>
+
+  <!-- BACKUP -->
+  <section id="tab-backup" class="hide">
+    <div class="card">
+      <h2>Backup &amp; settings</h2>
+      <p class="note">All data is stored only in this browser (localStorage). Export regularly so you never lose your history.</p>
+      <div class="inline" style="margin:10px 0">
+        <button id="exportBtn">⬇ Export all data (JSON)</button>
+        <button class="secondary" id="importBtn">⬆ Import data</button>
+        <input type="file" id="importFile" accept="application/json" class="hide">
+      </div>
+      <h3>Goal thresholds</h3>
+      <div class="grid3">
+        <div><label>Gold / Elite (status miles)</label><input type="number" id="s_gold"></div>
+        <div><label>Silver / Classic Plus (status miles)</label><input type="number" id="s_silver"></div>
+        <div><label>Silver alt. (flights)</label><input type="number" id="s_flights"></div>
+      </div>
+      <p class="note" style="margin-top:8px">Residence is set per traveller (affects renewal info). Defaults reflect members living outside Türkiye: renew Elite with 25,000 status miles in year 1 (37,500 over 2 years).</p>
+      <div class="inline" style="margin-top:12px">
+        <button class="danger small" id="wipeBtn">Erase everything</button>
+      </div>
+    </div>
+  </section>
+
+  <p class="note" style="text-align:center;margin:22px 0">
+    Built as an offline planning aid. Status miles ≈ flight distance × booking-class %. Great-circle distance is a close approximation of Turkish's published flight distance.
+  </p>
+</div>
+
+<script>
+/* ============================================================
+   SEED DATA
+   ============================================================ */
+
+// Airports: {iata, city, name, country, lat, lon}
+const AIRPORTS = [
+  ["IST","Istanbul","Istanbul Airport","TR",41.2753,28.7519],
+  ["SAW","Istanbul","Sabiha Gökçen","TR",40.8986,29.3092],
+  ["ESB","Ankara","Esenboğa","TR",40.1281,32.9951],
+  ["ADB","Izmir","Adnan Menderes","TR",38.2924,27.1567],
+  ["AYT","Antalya","Antalya","TR",36.8987,30.8005],
+  ["FRA","Frankfurt","Frankfurt","DE",50.0379,8.5622],
+  ["MUC","Munich","Munich","DE",48.3538,11.7861],
+  ["BER","Berlin","Berlin Brandenburg","DE",52.3667,13.5033],
+  ["DUS","Düsseldorf","Düsseldorf","DE",51.2895,6.7668],
+  ["HAM","Hamburg","Hamburg","DE",53.6304,9.9882],
+  ["STR","Stuttgart","Stuttgart","DE",48.6899,9.2220],
+  ["CGN","Cologne","Cologne Bonn","DE",50.8659,7.1427],
+  ["VIE","Vienna","Vienna","AT",48.1103,16.5697],
+  ["ZRH","Zurich","Zurich","CH",47.4647,8.5492],
+  ["GVA","Geneva","Geneva","CH",46.2381,6.1090],
+  ["BRU","Brussels","Brussels","BE",50.9014,4.4844],
+  ["AMS","Amsterdam","Schiphol","NL",52.3105,4.7683],
+  ["CDG","Paris","Charles de Gaulle","FR",49.0097,2.5479],
+  ["ORY","Paris","Orly","FR",48.7233,2.3794],
+  ["LHR","London","Heathrow","GB",51.4700,-0.4543],
+  ["LGW","London","Gatwick","GB",51.1537,-0.1821],
+  ["MAN","Manchester","Manchester","GB",53.3537,-2.2750],
+  ["MAD","Madrid","Barajas","ES",40.4983,-3.5676],
+  ["BCN","Barcelona","El Prat","ES",41.2974,2.0833],
+  ["LIS","Lisbon","Humberto Delgado","PT",38.7742,-9.1342],
+  ["FCO","Rome","Fiumicino","IT",41.8003,12.2389],
+  ["MXP","Milan","Malpensa","IT",45.6306,8.7281],
+  ["ATH","Athens","Eleftherios Venizelos","GR",37.9364,23.9445],
+  ["CPH","Copenhagen","Kastrup","DK",55.6181,12.6561],
+  ["ARN","Stockholm","Arlanda","SE",59.6519,17.9186],
+  ["OSL","Oslo","Gardermoen","NO",60.1939,11.1004],
+  ["HEL","Helsinki","Vantaa","FI",60.3172,24.9633],
+  ["WAW","Warsaw","Chopin","PL",52.1657,20.9671],
+  ["PRG","Prague","Václav Havel","CZ",50.1008,14.2600],
+  ["BUD","Budapest","Ferenc Liszt","HU",47.4369,19.2556],
+  ["OTP","Bucharest","Otopeni","RO",44.5711,26.0850],
+  ["SOF","Sofia","Sofia","BG",42.6967,23.4114],
+  ["BEG","Belgrade","Nikola Tesla","RS",44.8184,20.3091],
+  ["ZAG","Zagreb","Franjo Tuđman","HR",45.7429,16.0688],
+  ["DUB","Dublin","Dublin","IE",53.4213,-6.2701],
+  ["KBP","Kyiv","Boryspil","UA",50.3450,30.8947],
+  ["SVO","Moscow","Sheremetyevo","RU",55.9726,37.4146],
+  ["JFK","New York","John F. Kennedy","US",40.6413,-73.7781],
+  ["EWR","Newark","Newark Liberty","US",40.6895,-74.1745],
+  ["IAD","Washington","Dulles","US",38.9531,-77.4565],
+  ["ORD","Chicago","O'Hare","US",41.9742,-87.9073],
+  ["LAX","Los Angeles","Los Angeles","US",33.9416,-118.4085],
+  ["SFO","San Francisco","San Francisco","US",37.6213,-122.3790],
+  ["MIA","Miami","Miami","US",25.7959,-80.2870],
+  ["ATL","Atlanta","Hartsfield-Jackson","US",33.6407,-84.4277],
+  ["BOS","Boston","Logan","US",42.3656,-71.0096],
+  ["IAH","Houston","Bush","US",29.9902,-95.3368],
+  ["DFW","Dallas","Fort Worth","US",32.8998,-97.0403],
+  ["SEA","Seattle","Tacoma","US",47.4502,-122.3088],
+  ["YYZ","Toronto","Pearson","CA",43.6777,-79.6248],
+  ["YUL","Montreal","Trudeau","CA",45.4706,-73.7408],
+  ["YVR","Vancouver","Vancouver","CA",49.1967,-123.1815],
+  ["GRU","São Paulo","Guarulhos","BR",-23.4356,-46.4731],
+  ["GIG","Rio de Janeiro","Galeão","BR",-22.8100,-43.2506],
+  ["EZE","Buenos Aires","Ezeiza","AR",-34.8222,-58.5358],
+  ["BOG","Bogotá","El Dorado","CO",4.7016,-74.1469],
+  ["MEX","Mexico City","Benito Juárez","MX",19.4361,-99.0719],
+  ["DXB","Dubai","Dubai Intl","AE",25.2532,55.3657],
+  ["AUH","Abu Dhabi","Zayed","AE",24.4330,54.6511],
+  ["DOH","Doha","Hamad","QA",25.2731,51.6080],
+  ["JED","Jeddah","King Abdulaziz","SA",21.6796,39.1565],
+  ["RUH","Riyadh","King Khalid","SA",24.9576,46.6988],
+  ["CAI","Cairo","Cairo","EG",30.1219,31.4056],
+  ["TLV","Tel Aviv","Ben Gurion","IL",32.0114,34.8867],
+  ["AMM","Amman","Queen Alia","JO",31.7226,35.9932],
+  ["BEY","Beirut","Rafic Hariri","LB",33.8209,35.4884],
+  ["ADD","Addis Ababa","Bole","ET",8.9779,38.7993],
+  ["NBO","Nairobi","Jomo Kenyatta","KE",-1.3192,36.9278],
+  ["JNB","Johannesburg","OR Tambo","ZA",-26.1392,28.2460],
+  ["CPT","Cape Town","Cape Town","ZA",-33.9690,18.6017],
+  ["LOS","Lagos","Murtala Muhammed","NG",6.5774,3.3212],
+  ["DEL","Delhi","Indira Gandhi","IN",28.5562,77.1000],
+  ["BOM","Mumbai","Chhatrapati Shivaji","IN",19.0896,72.8656],
+  ["BLR","Bengaluru","Kempegowda","IN",13.1986,77.7066],
+  ["MAA","Chennai","Chennai","IN",12.9941,80.1709],
+  ["HYD","Hyderabad","Rajiv Gandhi","IN",17.2403,78.4294],
+  ["BKK","Bangkok","Suvarnabhumi","TH",13.6900,100.7501],
+  ["SIN","Singapore","Changi","SG",1.3644,103.9915],
+  ["KUL","Kuala Lumpur","KLIA","MY",2.7456,101.7099],
+  ["CGK","Jakarta","Soekarno-Hatta","ID",-6.1256,106.6559],
+  ["HKG","Hong Kong","Hong Kong Intl","HK",22.3080,113.9185],
+  ["PEK","Beijing","Capital","CN",40.0799,116.6031],
+  ["PVG","Shanghai","Pudong","CN",31.1443,121.8083],
+  ["CAN","Guangzhou","Baiyun","CN",23.3924,113.2988],
+  ["NRT","Tokyo","Narita","JP",35.7720,140.3929],
+  ["HND","Tokyo","Haneda","JP",35.5494,139.7798],
+  ["ICN","Seoul","Incheon","KR",37.4602,126.4407],
+  ["SYD","Sydney","Kingsford Smith","AU",-33.9399,151.1753],
+  ["MEL","Melbourne","Tullamarine","AU",-37.6690,144.8410],
+  ["AKL","Auckland","Auckland","NZ",-37.0082,174.7850],
+  ["TBS","Tbilisi","Tbilisi","GE",41.6692,44.9547],
+  ["GYD","Baku","Heydar Aliyev","AZ",40.4675,50.0467],
+  ["ALA","Almaty","Almaty","KZ",43.3521,77.0405],
+  ["TAS","Tashkent","Tashkent","UZ",41.2579,69.2812]
+];
+
+// Earning tables. statusPct = % of distance credited as STATUS miles (for Gold qualification).
+// awardPct = % credited as award/spendable miles. verified=false means: confirm on official page.
+// One row = one cabin + a group of fare-class letters sharing the same %.
+const DEFAULT_TABLES = {
+  "TK":{name:"Turkish Airlines / AnadoluJet",verified:true,note:"Economy 125% / Business 150% award; status members +25% bonus award in business. Per-letter status% confirm on official page.",rows:[
+    {cabin:"Business",classes:["J","C","D"],statusPct:150,awardPct:150},
+    {cabin:"Business",classes:["Z","K","P"],statusPct:125,awardPct:125},
+    {cabin:"Economy",classes:["Y","B"],statusPct:100,awardPct:125},
+    {cabin:"Economy",classes:["M","A","H"],statusPct:100,awardPct:125},
+    {cabin:"Economy",classes:["S","O","E","T"],statusPct:70,awardPct:90},
+    {cabin:"Economy",classes:["L","Q","V"],statusPct:70,awardPct:70},
+    {cabin:"Economy",classes:["W","U","N","R","G"],statusPct:25,awardPct:25}
+  ]},
+};
+
+// Star Alliance + Turkish non-alliance partners. Seeded with a generic, plausible structure (verified:false).
+const PARTNERS = [
+  ["A3","Aegean Airlines"],["AC","Air Canada"],["CA","Air China"],["AI","Air India"],
+  ["NZ","Air New Zealand"],["NH","ANA (All Nippon)"],["OZ","Asiana Airlines"],["OS","Austrian Airlines"],
+  ["AV","Avianca"],["SN","Brussels Airlines"],["CM","Copa Airlines"],["OU","Croatia Airlines"],
+  ["MS","EgyptAir"],["ET","Ethiopian Airlines"],["BR","EVA Air"],["LO","LOT Polish Airlines"],
+  ["LH","Lufthansa"],["SK","SAS Scandinavian"],["ZH","Shenzhen Airlines"],["SQ","Singapore Airlines"],
+  ["SA","South African Airways"],["LX","SWISS"],["TP","TAP Air Portugal"],["TG","THAI Airways"],
+  ["UA","United Airlines"],
+  // Non-alliance Miles&Smiles partners:
+  ["AD","Azul Brazilian Airlines"],["G3","GOL Linhas Aéreas"],["6E","IndiGo"],["OA","Olympic Air"]
+];
+function genericRows(){return [
+  {cabin:"First",classes:["F","A","P"],statusPct:150,awardPct:150},
+  {cabin:"Business",classes:["J","C","D","Z"],statusPct:150,awardPct:150},
+  {cabin:"Business (discount)",classes:["I"],statusPct:125,awardPct:125},
+  {cabin:"Premium Economy",classes:["W","E"],statusPct:110,awardPct:110},
+  {cabin:"Economy (full)",classes:["Y","B"],statusPct:100,awardPct:100},
+  {cabin:"Economy",classes:["M","U","H","Q","V"],statusPct:75,awardPct:75},
+  {cabin:"Economy (discount)",classes:["W","S","T","L","K"],statusPct:50,awardPct:50},
+  {cabin:"Economy (deep discount)",classes:["G","N","O","R"],statusPct:25,awardPct:25}
+];}
+PARTNERS.forEach(([code,name])=>{
+  DEFAULT_TABLES[code]={name,verified:false,note:"Generic seed — confirm exact %% per booking class on the official Turkish Airlines page.",rows:genericRows()};
+});
+
+/* ============================================================
+   STATE
+   ============================================================ */
+const LS_KEY="milesSmilesGoldTracker_v1";
+const DEFAULT_SETTINGS={gold:40000,silver:25000,silverFlights:40};
+
+function newProfile(name){return {id:"p"+Math.random().toString(36).slice(2,8),name,residence:"outside",membershipStart:todayISO(),flights:[]};}
+function freshState(){
+  return {
+    activeId:null,
+    profiles:[newProfile("Me"),newProfile("Wife"),newProfile("Son")],
+    tableOverrides:{}, // code -> table (full override)
+    customAirlines:{}, // code -> table for user-added airlines
+    settings:{...DEFAULT_SETTINGS}
+  };
+}
+let S = load();
+if(!S.activeId) S.activeId=S.profiles[0].id;
+
+function load(){
+  try{const raw=localStorage.getItem(LS_KEY);if(raw)return JSON.parse(raw);}catch(e){}
+  const s=freshState();return s;
+}
+function save(){localStorage.setItem(LS_KEY,JSON.stringify(S));}
+
+/* ============================================================
+   HELPERS
+   ============================================================ */
+function todayISO(){return new Date().toISOString().slice(0,10);}
+function airline(code){return S.customAirlines[code]||S.tableOverrides[code]||DEFAULT_TABLES[code];}
+function allAirlineCodes(){
+  const set=new Set([...Object.keys(DEFAULT_TABLES),...Object.keys(S.customAirlines)]);
+  return [...set].sort((a,b)=>airline(a).name.localeCompare(airline(b).name));
+}
+function activeProfile(){return S.profiles.find(p=>p.id===S.activeId)||S.profiles[0];}
+function fmt(n){return Math.round(n).toLocaleString("en-US");}
+function airportByCode(code){if(!code)return null;code=code.trim().toUpperCase();return AIRPORTS.find(a=>a[0]===code)||null;}
+function haversine(a,b){
+  const R=3958.7613; // statute miles
+  const toR=x=>x*Math.PI/180;
+  const dLat=toR(b[4]-a[4]),dLon=toR(b[5]-a[5]);
+  const la1=toR(a[4]),la2=toR(b[4]);
+  const h=Math.sin(dLat/2)**2+Math.cos(la1)*Math.cos(la2)*Math.sin(dLon/2)**2;
+  return 2*R*Math.asin(Math.sqrt(h));
+}
+// membership-year window containing today
+function currentWindow(p){
+  const start=new Date(p.membershipStart+"T00:00:00");
+  const now=new Date();
+  let s=new Date(start);
+  while(true){
+    const e=new Date(s);e.setFullYear(e.getFullYear()+1);
+    if(now<e) return {start:s,end:e};
+    s=e;
+  }
+}
+function inWindow(dateISO,w){const d=new Date(dateISO+"T00:00:00");return d>=w.start&&d<w.end;}
+function statusMilesInWindow(p){
+  const w=currentWindow(p);
+  return p.flights.filter(f=>inWindow(f.date,w)).reduce((s,f)=>s+f.statusMiles,0);
+}
+function flightsInWindow(p){const w=currentWindow(p);return p.flights.filter(f=>inWindow(f.date,w)).length;}
+function awardMilesTotal(p){return p.flights.reduce((s,f)=>s+(f.awardMiles||0),0);}
+function tier(statusMiles,flights){
+  if(statusMiles>=S.settings.gold) return {name:"Elite",star:"Star Alliance Gold",cls:"gold"};
+  if(statusMiles>=S.settings.silver||flights>=S.settings.silverFlights) return {name:"Classic Plus",star:"Star Alliance Silver",cls:"silver"};
+  return {name:"Classic",star:"—",cls:"warn"};
+}
+
+/* ============================================================
+   NAV
+   ============================================================ */
+function go(tab){
+  document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("active",b.dataset.tab===tab));
+  ["dashboard","add","log","compare","planner","tables","backup"].forEach(t=>{
+    document.getElementById("tab-"+t).classList.toggle("hide",t!==tab);
+  });
+  if(tab==="dashboard")renderDashboard();
+  if(tab==="add")renderAdd();
+  if(tab==="log")renderLog();
+  if(tab==="compare")renderCompare();
+  if(tab==="planner")renderPlanner();
+  if(tab==="tables")renderTables();
+  if(tab==="backup")renderBackup();
+}
+document.getElementById("tabs").addEventListener("click",e=>{if(e.target.dataset.tab)go(e.target.dataset.tab);});
+
+/* ============================================================
+   PROFILE BAR
+   ============================================================ */
+function renderProfiles(){
+  const c=document.getElementById("profileButtons");c.innerHTML="";
+  S.profiles.forEach(p=>{
+    const b=document.createElement("button");b.className="small"+(p.id===S.activeId?" active":"");
+    b.textContent=p.name;b.onclick=()=>{S.activeId=p.id;save();renderProfiles();go(currentTab());};
+    b.ondblclick=()=>renameProfile(p);
+    c.appendChild(b);
+  });
+}
+function currentTab(){const a=document.querySelector(".tabs button.active");return a?a.dataset.tab:"dashboard";}
+function renameProfile(p){
+  const n=prompt("Rename traveller:",p.name);if(n&&n.trim()){p.name=n.trim();save();renderProfiles();go(currentTab());}
+}
+document.getElementById("addProfileBtn").onclick=()=>{
+  const n=prompt("New traveller name:");if(n&&n.trim()){const np=newProfile(n.trim());S.profiles.push(np);S.activeId=np.id;save();renderProfiles();go("dashboard");}
+};
+
+/* ============================================================
+   DASHBOARD
+   ============================================================ */
+function goldBarHTML(statusMiles){
+  const goldPct=Math.min(100,statusMiles/S.settings.gold*100);
+  const silverPos=S.settings.silver/S.settings.gold*100;
+  return `<div class="bar"><div class="fill" style="width:${goldPct}%"></div>
+    <div class="mark" style="left:${silverPos}%"><span>Silver ${fmt(S.settings.silver)}</span></div></div>
+    <div class="note">${fmt(statusMiles)} / ${fmt(S.settings.gold)} status miles to <b style="color:var(--gold)">Gold</b> · ${goldPct>=100?"🎉 reached!":fmt(S.settings.gold-statusMiles)+" to go"}</div>`;
+}
+function renderDashboard(){
+  const p=activeProfile();
+  const sm=statusMilesInWindow(p), fl=flightsInWindow(p), aw=awardMilesTotal(p);
+  const w=currentWindow(p);
+  const t=tier(sm,fl);
+  document.getElementById("dashTitle").innerHTML=`${p.name} <span class="pill ${t.cls}">${t.name}${t.star!=="—"?" · "+t.star:""}</span>`;
+  document.getElementById("goldBar").innerHTML=goldBarHTML(sm);
+
+  const daysLeft=Math.max(0,Math.ceil((w.end-new Date())/(864e5)));
+  const daysIn=Math.max(1,Math.ceil((new Date()-w.start)/(864e5)));
+  const pace=sm/daysIn; const projected=Math.round(sm+pace*daysLeft);
+
+  const stats=[
+    ["Status miles (this year)",fmt(sm)],
+    ["Miles to Gold",sm>=S.settings.gold?"✓ reached":fmt(S.settings.gold-sm)],
+    ["Flights (this year)",fl+(fl>=S.settings.silverFlights?" ✓":"")],
+    ["Award miles (spendable, all-time)",fmt(aw)],
+    ["Projected by year-end",fmt(projected)],
+    ["Days left in window",daysLeft]
+  ];
+  document.getElementById("dashStats").innerHTML=stats.map(([l,n])=>
+    `<div class="stat"><div class="n">${n}</div><div class="l">${l}</div></div>`).join("");
+
+  document.getElementById("dashWindow").innerHTML=
+    `Membership window: <b>${w.start.toISOString().slice(0,10)}</b> → <b>${w.end.toISOString().slice(0,10)}</b>.
+     Renewal (outside Türkiye): 25,000 status miles in year 1, or 37,500 over two years, keeps Elite for 2 more years.
+     <br><span class="muted">Double-click a traveller's name in the header to rename. Membership start date is set per traveller in the flight log header.</span>`;
+}
+
+/* ============================================================
+   ADD FLIGHT
+   ============================================================ */
+function fillAirlineSelect(sel){
+  sel.innerHTML=allAirlineCodes().map(c=>`<option value="${c}">${airline(c).name} (${c})${airline(c).verified?"":" ⚠"}</option>`).join("");
+}
+function fillClassEl(airlineCode,sel){
+  const a=airline(airlineCode);
+  sel.innerHTML="";
+  a.rows.forEach((r,i)=>{
+    r.classes.forEach(letter=>{
+      const o=document.createElement("option");
+      o.value=i+"|"+letter;
+      o.textContent=`${r.cabin} — ${letter}  (${r.statusPct}% status / ${r.awardPct}% award)`;
+      sel.appendChild(o);
+    });
+  });
+}
+function fillClassSelect(airlineCode){fillClassEl(airlineCode,document.getElementById("f_class"));}
+function renderAdd(){
+  document.getElementById("addForWho").textContent="· "+activeProfile().name;
+  const sel=document.getElementById("f_airline");
+  const prev=sel.value;
+  fillAirlineSelect(sel);
+  if([...sel.options].some(o=>o.value===prev))sel.value=prev; else sel.value="TK";
+  if(!document.getElementById("f_date").value)document.getElementById("f_date").value=todayISO();
+  fillClassSelect(sel.value);
+  updatePreview();
+}
+function buildAirportDatalist(){
+  document.getElementById("airportList").innerHTML=
+    AIRPORTS.map(a=>`<option value="${a[0]}">${a[1]} — ${a[2]} (${a[3]})</option>`).join("");
+}
+function autoDistance(){
+  const a=airportByCode(document.getElementById("f_from").value);
+  const b=airportByCode(document.getElementById("f_to").value);
+  const distEl=document.getElementById("f_dist");
+  if(a&&b){distEl.value=Math.round(haversine(a,b));distEl.dataset.auto="1";}
+}
+function currentSelection(){
+  const aCode=document.getElementById("f_airline").value;
+  const a=airline(aCode);
+  const [ri,letter]=(document.getElementById("f_class").value||"0|").split("|");
+  const row=a.rows[+ri]||a.rows[0];
+  const dist=parseFloat(document.getElementById("f_dist").value)||0;
+  const rt=parseInt(document.getElementById("f_rt").value)||1;
+  const status=Math.round(dist*row.statusPct/100)*rt;
+  const award=Math.round(dist*row.awardPct/100)*rt;
+  return {aCode,a,row,letter,dist,rt,status,award};
+}
+function updatePreview(){
+  const s=currentSelection();
+  const p=activeProfile();
+  const staged=(typeof tripDraft!=="undefined"?tripDraft:[]).reduce((x,l)=>x+l.statusMiles,0);
+  const before=statusMilesInWindow(p)+staged;
+  const after=before+s.status;
+  const remain=Math.max(0,S.settings.gold-after);
+  const pct=Math.min(100,after/S.settings.gold*100);
+  document.getElementById("preview").innerHTML=
+    `<div class="note">This flight earns</div>
+     <div class="big">+${fmt(s.status)} status miles</div>
+     <div class="note">+${fmt(s.award)} award (spendable) miles · ${s.dist?fmt(s.dist)+" mi":"enter a distance"}${s.rt===2?" · round trip":""}</div>
+     <div class="bar" style="margin-top:12px"><div class="fill" style="width:${pct}%"></div></div>
+     <div class="note"><b>${p.name}</b>: ${fmt(before)}${staged?" (incl. staged trip)":""} → <b style="color:var(--gold)">${fmt(after)}</b> / ${fmt(S.settings.gold)} status miles ·
+       ${after>=S.settings.gold?"🎉 Gold reached!":fmt(remain)+" to Gold"}</div>`;
+  const note=document.getElementById("classNote");
+  note.innerHTML=s.a.verified?
+    `<span class="pill ok">verified</span> ${s.a.note||""}`:
+    `<span class="pill warn">unverified seed</span> ${s.a.note||""} <a href="https://www.turkishairlines.com/en-int/miles-and-smiles/earning-miles/earn-miles-on-flights/" target="_blank" rel="noopener">Check official %% →</a> then edit under “Earning tables”.`;
+}
+["f_from","f_to"].forEach(id=>document.getElementById(id).addEventListener("input",()=>{autoDistance();updatePreview();}));
+document.getElementById("f_dist").addEventListener("input",updatePreview);
+document.getElementById("f_rt").addEventListener("change",updatePreview);
+document.getElementById("f_airline").addEventListener("change",e=>{fillClassSelect(e.target.value);updatePreview();});
+document.getElementById("f_class").addEventListener("change",updatePreview);
+function buildLegs(){
+  const s=currentSelection();
+  if(!s.dist)return null;
+  const from=document.getElementById("f_from").value.toUpperCase().trim();
+  const to=document.getElementById("f_to").value.toUpperCase().trim();
+  const date=document.getElementById("f_date").value||todayISO();
+  const legs=[];
+  for(let i=0;i<s.rt;i++){
+    legs.push({
+      date, airlineCode:s.aCode, from:i===0?from:to, to:i===0?to:from,
+      distance:Math.round(s.dist), cabin:s.row.cabin, fareClass:s.letter,
+      statusMiles:Math.round(s.dist*s.row.statusPct/100),
+      awardMiles:Math.round(s.dist*s.row.awardPct/100)
+    });
+  }
+  return legs;
+}
+function clearRouteInputs(){
+  document.getElementById("f_from").value="";document.getElementById("f_to").value="";document.getElementById("f_dist").value="";
+}
+document.getElementById("addFlightBtn").onclick=()=>{
+  const legs=buildLegs();
+  if(!legs){alert("Enter a distance (pick two known airports, or type it in).");return;}
+  const p=activeProfile();
+  legs.forEach(l=>p.flights.push(l));
+  save();clearRouteInputs();
+  const sm=legs.reduce((s,l)=>s+l.statusMiles,0);
+  alert(`Added ${legs.length>1?legs.length+" flights":"flight"} for ${p.name}: +${fmt(sm)} status miles.`);
+  updatePreview();
+};
+
+// ---- Multi-segment trip builder ----
+let tripDraft=[];
+document.getElementById("addSegBtn").onclick=()=>{
+  const legs=buildLegs();
+  if(!legs){alert("Enter a distance first.");return;}
+  legs.forEach(l=>tripDraft.push(l));
+  clearRouteInputs();
+  renderTripDraft();updatePreview();
+};
+document.getElementById("clearTripBtn").onclick=()=>{tripDraft=[];renderTripDraft();};
+document.getElementById("logTripBtn").onclick=()=>{
+  if(!tripDraft.length)return;
+  const p=activeProfile();
+  const sm=tripDraft.reduce((s,l)=>s+l.statusMiles,0);
+  tripDraft.forEach(l=>p.flights.push(l));
+  save();tripDraft=[];renderTripDraft();
+  alert(`Logged trip for ${p.name}: +${fmt(sm)} status miles.`);
+  updatePreview();
+};
+function removeSeg(i){tripDraft.splice(i,1);renderTripDraft();updatePreview();}
+function renderTripDraft(){
+  const box=document.getElementById("tripDraftBox");
+  if(!tripDraft.length){box.classList.add("hide");return;}
+  box.classList.remove("hide");
+  const sm=tripDraft.reduce((s,l)=>s+l.statusMiles,0);
+  const aw=tripDraft.reduce((s,l)=>s+l.awardMiles,0);
+  let html=`<thead><tr><th>#</th><th>Airline</th><th>Route</th><th>Class</th><th class="right">Status mi</th><th></th></tr></thead><tbody>`;
+  tripDraft.forEach((l,i)=>{
+    html+=`<tr><td>${i+1}</td><td>${l.airlineCode}</td><td>${l.from}→${l.to}</td><td>${l.cabin} · ${l.fareClass}</td>
+      <td class="right"><b>${fmt(l.statusMiles)}</b></td><td class="right"><button class="small danger" onclick="removeSeg(${i})">✕</button></td></tr>`;
+  });
+  html+=`</tbody><tfoot><tr><th colspan="4" class="right">Trip total</th><th class="right">${fmt(sm)} status<br><span class="muted">${fmt(aw)} award</span></th><th></th></tr></tfoot>`;
+  document.getElementById("tripDraftTable").innerHTML=html;
+}
+
+/* ============================================================
+   FLIGHT LOG
+   ============================================================ */
+function renderLog(){
+  const p=activeProfile();
+  document.getElementById("logTitle").innerHTML=`Flight log · ${p.name}`;
+  const w=currentWindow(p);
+  let html=`<div class="inline" style="margin-bottom:10px">
+      <label style="margin:0">Membership start</label>
+      <input type="date" id="memStart" value="${p.membershipStart}" style="max-width:180px">
+      <span class="tag">Window: ${w.start.toISOString().slice(0,10)} → ${w.end.toISOString().slice(0,10)}</span>
+    </div>`;
+  if(!p.flights.length){html+=`<p class="muted">No flights yet. Add one under “Add a flight”.</p>`;}
+  else{
+    const sorted=[...p.flights].sort((a,b)=>a.date.localeCompare(b.date));
+    html+=`<div style="overflow-x:auto"><table><thead><tr>
+      <th>Date</th><th>Airline</th><th>Route</th><th>Class</th><th class="right">Dist</th>
+      <th class="right">Status mi</th><th class="right">Award mi</th><th class="right">In window</th><th></th></tr></thead><tbody>`;
+    sorted.forEach(f=>{
+      const idx=p.flights.indexOf(f);
+      html+=`<tr>
+        <td>${f.date}</td>
+        <td>${(airline(f.airlineCode)||{name:f.airlineCode}).name}<div class="muted" style="font-size:11px">${f.airlineCode}</div></td>
+        <td>${f.from||"?"} → ${f.to||"?"}</td>
+        <td>${f.cabin} · ${f.fareClass}</td>
+        <td class="right">${fmt(f.distance)}</td>
+        <td class="right"><b>${fmt(f.statusMiles)}</b></td>
+        <td class="right">${fmt(f.awardMiles||0)}</td>
+        <td class="right">${inWindow(f.date,w)?"✓":"—"}</td>
+        <td class="right"><button class="small danger" onclick="delFlight(${idx})">✕</button></td>
+      </tr>`;
+    });
+    const sm=statusMilesInWindow(p);
+    html+=`</tbody><tfoot><tr><th colspan="5" class="right">Totals (this membership year)</th>
+      <th class="right">${fmt(sm)}</th><th class="right">${fmt(awardMilesTotal(p))}</th><th colspan="2"></th></tr></tfoot></table></div>`;
+  }
+  document.getElementById("logTable").innerHTML=html;
+  const ms=document.getElementById("memStart");
+  if(ms)ms.onchange=()=>{p.membershipStart=ms.value;save();renderLog();};
+}
+function delFlight(i){const p=activeProfile();if(confirm("Delete this flight?")){p.flights.splice(i,1);save();renderLog();}}
+
+/* ============================================================
+   COMPARE
+   ============================================================ */
+function renderCompare(){
+  let html="";
+  S.profiles.forEach(p=>{
+    const sm=statusMilesInWindow(p),fl=flightsInWindow(p);
+    const t=tier(sm,fl);
+    html+=`<div style="margin-bottom:16px">
+      <div class="inline" style="justify-content:space-between">
+        <b>${p.name}</b> <span class="pill ${t.cls}">${t.name}</span>
+      </div>${goldBarHTML(sm)}
+      <div class="muted" style="font-size:12px">${fl} flights · ${fmt(awardMilesTotal(p))} award miles</div>
+    </div>`;
+  });
+  document.getElementById("compareBody").innerHTML=html;
+}
+
+/* ============================================================
+   GOLD PLANNER
+   ============================================================ */
+function planGoalTarget(){return document.getElementById("pl_goal").value==="silver"?S.settings.silver:S.settings.gold;}
+function planGoalName(){return document.getElementById("pl_goal").value==="silver"?"Silver":"Gold";}
+function renderPlanner(){
+  const p=activeProfile();
+  const sm=statusMilesInWindow(p), w=currentWindow(p);
+  document.getElementById("planTitle").innerHTML=`Gold planner · ${p.name}`;
+  const daysLeft=Math.max(0,Math.ceil((w.end-new Date())/864e5));
+  const daysIn=Math.max(1,Math.ceil((new Date()-w.start)/864e5));
+  const pace=sm/daysIn;
+  const projected=Math.round(sm+pace*daysLeft);
+  const stats=[
+    ["Status miles now",fmt(sm)],
+    ["To Gold (40k)",sm>=S.settings.gold?"✓ reached":fmt(S.settings.gold-sm)],
+    ["To Silver (25k)",sm>=S.settings.silver?"✓ reached":fmt(S.settings.silver-sm)]
+  ];
+  document.getElementById("planStats").innerHTML=stats.map(([l,n])=>`<div class="stat"><div class="n">${n}</div><div class="l">${l}</div></div>`).join("");
+  document.getElementById("planPace").innerHTML=
+    `Current pace: <b>${fmt(pace*30)}</b> status miles / month. At this pace you'll have <b>${fmt(projected)}</b> by the window end (${w.end.toISOString().slice(0,10)}) — `+
+    (projected>=S.settings.gold?'<span style="color:var(--gold)">Gold on track 🎉</span>':
+     projected>=S.settings.silver?'<span style="color:var(--silver)">Silver on track, short of Gold</span>':'below Silver so far').concat(".");
+
+  const tEl=document.getElementById("pl_target");
+  if(!tEl.value)tEl.value=w.end.toISOString().slice(0,10);
+  tEl.onchange=updateRequired;
+  document.getElementById("pl_goal").onchange=()=>{updateRequired();updateFlightsNeeded();};
+  updateRequired();
+
+  const aSel=document.getElementById("pl_airline");
+  fillAirlineSelect(aSel);
+  if([...aSel.options].every(o=>o.value!==aSel.value))aSel.value="TK";
+  fillClassEl(aSel.value,document.getElementById("pl_class"));
+  aSel.onchange=()=>{fillClassEl(aSel.value,document.getElementById("pl_class"));updateFlightsNeeded();};
+  ["pl_from","pl_to"].forEach(id=>document.getElementById(id).oninput=()=>{plAutoDist();updateFlightsNeeded();});
+  document.getElementById("pl_dist").oninput=updateFlightsNeeded;
+  document.getElementById("pl_class").onchange=updateFlightsNeeded;
+  updateFlightsNeeded();
+}
+function updateRequired(){
+  const p=activeProfile();const sm=statusMilesInWindow(p);
+  const goal=planGoalTarget();
+  const remaining=Math.max(0,goal-sm);
+  const target=new Date((document.getElementById("pl_target").value||currentWindow(p).end.toISOString().slice(0,10))+"T00:00:00");
+  const days=Math.max(1,Math.ceil((target-new Date())/864e5));
+  const box=document.getElementById("planRequired");
+  if(remaining<=0){box.innerHTML=`<div class="big">${planGoalName()} already reached ✓</div><div class="note">${fmt(sm)} ≥ ${fmt(goal)} status miles.</div>`;return;}
+  box.innerHTML=`<div class="note">To hit <b>${planGoalName()}</b> (${fmt(goal)}) by ${target.toISOString().slice(0,10)} you need</div>
+    <div class="big">${fmt(remaining)} more status miles</div>
+    <div class="note">≈ <b>${fmt(remaining/days*7)}</b> per week, or <b>${fmt(remaining/days*30)}</b> per month, over the next ${days} days.</div>`;
+}
+function plAutoDist(){
+  const a=airportByCode(document.getElementById("pl_from").value),b=airportByCode(document.getElementById("pl_to").value);
+  if(a&&b)document.getElementById("pl_dist").value=Math.round(haversine(a,b));
+}
+function updateFlightsNeeded(){
+  const p=activeProfile();const sm=statusMilesInWindow(p);const goal=planGoalTarget();
+  const remaining=Math.max(0,goal-sm);
+  const a=airline(document.getElementById("pl_airline").value);
+  const [ri,letter]=(document.getElementById("pl_class").value||"0|").split("|");
+  const row=a.rows[+ri]||a.rows[0];
+  const dist=parseFloat(document.getElementById("pl_dist").value)||0;
+  const box=document.getElementById("planFlights");
+  if(!dist){box.innerHTML=`<div class="note">Pick a route (or type a distance) to see how many flights you'd need.</div>`;return;}
+  const ow=Math.round(dist*row.statusPct/100), rt=ow*2;
+  if(remaining<=0){box.innerHTML=`<div class="big">${planGoalName()} already reached ✓</div>`;return;}
+  box.innerHTML=`<div class="note">${a.name} · ${row.cabin} ${letter} · ${fmt(dist)} mi → ${fmt(ow)} status mi one-way (${fmt(rt)} round trip)</div>
+    <div class="big">${Math.ceil(remaining/rt)} round trips</div>
+    <div class="note">or ${Math.ceil(remaining/ow)} one-way flights to cover the remaining ${fmt(remaining)} status miles to ${planGoalName()}.</div>`;
+}
+
+/* ============================================================
+   EARNING TABLE EDITOR
+   ============================================================ */
+function renderTables(){
+  const sel=document.getElementById("t_airline");
+  const prev=sel.value;
+  sel.innerHTML=allAirlineCodes().map(c=>`<option value="${c}">${airline(c).name} (${c})${airline(c).verified?"":" ⚠"}</option>`).join("");
+  if([...sel.options].some(o=>o.value===prev))sel.value=prev;else sel.value="TK";
+  drawEditor(sel.value);
+}
+function effectiveTable(code){
+  // returns an editable copy (override/custom if present, else default clone)
+  return JSON.parse(JSON.stringify(airline(code)));
+}
+function drawEditor(code){
+  const a=effectiveTable(code);
+  const ed=document.getElementById("tableEditor");
+  let html=`<div class="inline" style="justify-content:space-between;margin-bottom:8px">
+    <div><b>${a.name}</b> <span class="tag">${code}</span>
+      <span class="pill ${a.verified?"ok":"warn"}">${a.verified?"verified":"unverified seed"}</span></div>
+    <label class="inline" style="margin:0;font-size:13px"><input type="checkbox" id="t_verified" ${a.verified?"checked":""} style="width:auto"> mark verified</label>
+  </div>
+  <input id="t_note" value="${(a.note||"").replace(/"/g,'&quot;')}" placeholder="Notes / source">
+  <div style="overflow-x:auto;margin-top:10px"><table id="t_rows"><thead><tr>
+    <th>Cabin</th><th>Fare classes (space/comma)</th><th>Status %</th><th>Award %</th><th></th></tr></thead><tbody>`;
+  a.rows.forEach((r,i)=>{
+    html+=`<tr class="editrow">
+      <td><input value="${r.cabin}" data-f="cabin" data-i="${i}"></td>
+      <td><input value="${r.classes.join(' ')}" data-f="classes" data-i="${i}"></td>
+      <td><input type="number" value="${r.statusPct}" data-f="statusPct" data-i="${i}" style="width:80px"></td>
+      <td><input type="number" value="${r.awardPct}" data-f="awardPct" data-i="${i}" style="width:80px"></td>
+      <td><button class="small danger" data-del="${i}">✕</button></td>
+    </tr>`;
+  });
+  html+=`</tbody></table></div>
+    <div class="inline" style="margin-top:10px">
+      <button class="small secondary" id="t_addRow">+ Add row</button>
+      <button class="small" id="t_save">💾 Save changes</button>
+    </div>`;
+  ed.innerHTML=html;
+
+  ed.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{a.rows.splice(+b.dataset.del,1);stash(code,a);drawEditor(code);});
+  document.getElementById("t_addRow").onclick=()=>{a.rows.push({cabin:"Economy",classes:["X"],statusPct:50,awardPct:50});stash(code,a);drawEditor(code);};
+  document.getElementById("t_save").onclick=()=>{
+    const rows=[...ed.querySelectorAll("#t_rows tbody tr")].map(tr=>{
+      const g=f=>tr.querySelector(`[data-f="${f}"]`).value;
+      return {cabin:g("cabin"),classes:g("classes").split(/[ ,]+/).filter(Boolean).map(s=>s.toUpperCase()),
+        statusPct:parseFloat(g("statusPct"))||0,awardPct:parseFloat(g("awardPct"))||0};
+    });
+    const t={name:a.name,verified:document.getElementById("t_verified").checked,note:document.getElementById("t_note").value,rows};
+    stash(code,t);
+    save();
+    alert("Saved "+a.name+".");
+    renderTables();
+  };
+}
+// keep in-progress edits without persisting until Save (use override slot)
+function stash(code,t){
+  if(S.customAirlines[code])S.customAirlines[code]=t; else S.tableOverrides[code]=t;
+}
+document.getElementById("t_airline").addEventListener("change",e=>drawEditor(e.target.value));
+document.getElementById("resetAirlineBtn").onclick=()=>{
+  const code=document.getElementById("t_airline").value;
+  if(DEFAULT_TABLES[code]){delete S.tableOverrides[code];save();alert("Reset to default.");renderTables();}
+  else alert("Custom airlines have no default. Delete a row-by-row or remove it manually.");
+};
+document.getElementById("addAirlineBtn").onclick=()=>{
+  const code=prompt("New airline 2-letter code (e.g. XX):");if(!code)return;
+  const c=code.toUpperCase().trim();
+  const name=prompt("Airline name:")||c;
+  S.customAirlines[c]={name,verified:false,note:"User-added.",rows:genericRows()};
+  save();renderTables();document.getElementById("t_airline").value=c;drawEditor(c);
+};
+
+/* ============================================================
+   BACKUP & SETTINGS
+   ============================================================ */
+function renderBackup(){
+  document.getElementById("s_gold").value=S.settings.gold;
+  document.getElementById("s_silver").value=S.settings.silver;
+  document.getElementById("s_flights").value=S.settings.silverFlights;
+}
+["s_gold","s_silver","s_flights"].forEach(id=>{
+  document.getElementById(id).addEventListener("change",()=>{
+    S.settings.gold=parseInt(document.getElementById("s_gold").value)||40000;
+    S.settings.silver=parseInt(document.getElementById("s_silver").value)||25000;
+    S.settings.silverFlights=parseInt(document.getElementById("s_flights").value)||40;
+    save();
+  });
+});
+document.getElementById("exportBtn").onclick=()=>{
+  const blob=new Blob([JSON.stringify(S,null,2)],{type:"application/json"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);
+  a.download="miles-smiles-gold-"+todayISO()+".json";a.click();
+};
+document.getElementById("importBtn").onclick=()=>document.getElementById("importFile").click();
+document.getElementById("importFile").onchange=e=>{
+  const file=e.target.files[0];if(!file)return;
+  const r=new FileReader();
+  r.onload=()=>{try{const d=JSON.parse(r.result);if(!d.profiles)throw 0;S=d;if(!S.activeId)S.activeId=S.profiles[0].id;save();renderProfiles();go("dashboard");alert("Imported.");}catch(err){alert("Invalid backup file.");}};
+  r.readAsText(file);
+};
+document.getElementById("wipeBtn").onclick=()=>{
+  if(confirm("Erase ALL travellers, flights and table edits? This cannot be undone."))
+  {localStorage.removeItem(LS_KEY);S=freshState();S.activeId=S.profiles[0].id;save();renderProfiles();go("dashboard");}
+};
+
+/* ============================================================
+   INIT
+   ============================================================ */
+buildAirportDatalist();
+renderProfiles();
+go("dashboard");
+</script>
+</body>
+</html>
