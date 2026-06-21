@@ -665,6 +665,17 @@ function genericRows(){return [
 PARTNERS.forEach(([code,name])=>{
   DEFAULT_TABLES[code]={name,verified:false,note:"Generic seed — confirm exact %% per booking class on the official Turkish Airlines page.",rows:genericRows()};
 });
+// Lufthansa: Miles&Smiles applies per-class MINIMUM miles on short flights. H seeded at 800 (per user); confirm all values + minimums on the official page.
+DEFAULT_TABLES["LH"]={name:"Lufthansa",verified:false,note:"Per-class minimum miles apply on short flights (earn = max(distance×%, minimum)). H seeded with min 800; confirm all %% and minimums on the official page.",rows:[
+  {cabin:"First",classes:["F","A"],statusPct:150,awardPct:150,minStatus:0,minAward:0},
+  {cabin:"Business",classes:["J","C","D","Z"],statusPct:150,awardPct:150,minStatus:0,minAward:0},
+  {cabin:"Business (discount)",classes:["P","I"],statusPct:125,awardPct:125,minStatus:0,minAward:0},
+  {cabin:"Economy (full)",classes:["Y","B"],statusPct:100,awardPct:100,minStatus:0,minAward:0},
+  {cabin:"Economy (H)",classes:["H"],statusPct:100,awardPct:100,minStatus:800,minAward:800},
+  {cabin:"Economy",classes:["M","U","Q","V","S","A","O","E"],statusPct:100,awardPct:100,minStatus:0,minAward:0},
+  {cabin:"Economy (discount)",classes:["W","T","L","K"],statusPct:50,awardPct:50,minStatus:0,minAward:0},
+  {cabin:"Economy (deep discount)",classes:["G","N","R"],statusPct:25,awardPct:25,minStatus:0,minAward:0}
+]};
 
 /* ============================================================
    STATE
@@ -708,6 +719,8 @@ function allAirlineCodes(){
 }
 function activeProfile(){return S.profiles.find(p=>p.id===S.activeId)||S.profiles[0];}
 function fmt(n){return Math.round(n).toLocaleString("en-US");}
+// miles for one segment: distance × % but never less than the per-class minimum
+function earned(dist,pct,min){return Math.max(Math.round(dist*pct/100), min||0);}
 function airportByCode(code){if(!code)return null;code=code.trim().toUpperCase();return AIRPORTS.find(a=>a[0]===code)||null;}
 function haversine(a,b){
   const R=3958.7613; // statute miles
@@ -831,7 +844,7 @@ function fillClassEl(airlineCode,sel){
     r.classes.forEach(letter=>{
       const o=document.createElement("option");
       o.value=i+"|"+letter;
-      o.textContent=`${r.cabin} — ${letter}  (${r.statusPct}% status / ${r.awardPct}% award)`;
+      o.textContent=`${r.cabin} — ${letter}  (${r.statusPct}% status / ${r.awardPct}% award${r.minStatus?`, min ${r.minStatus}`:""})`;
       sel.appendChild(o);
     });
   });
@@ -864,8 +877,8 @@ function currentSelection(){
   const row=a.rows[+ri]||a.rows[0];
   const dist=parseFloat(document.getElementById("f_dist").value)||0;
   const rt=parseInt(document.getElementById("f_rt").value)||1;
-  const status=Math.round(dist*row.statusPct/100)*rt;
-  const award=Math.round(dist*row.awardPct/100)*rt;
+  const status=earned(dist,row.statusPct,row.minStatus)*rt;
+  const award=earned(dist,row.awardPct,row.minAward)*rt;
   return {aCode,a,row,letter,dist,rt,status,award};
 }
 function updatePreview(){
@@ -904,8 +917,8 @@ function buildLegs(){
     legs.push({
       date, airlineCode:s.aCode, from:i===0?from:to, to:i===0?to:from,
       distance:Math.round(s.dist), cabin:s.row.cabin, fareClass:s.letter,
-      statusMiles:Math.round(s.dist*s.row.statusPct/100),
-      awardMiles:Math.round(s.dist*s.row.awardPct/100)
+      statusMiles:earned(s.dist,s.row.statusPct,s.row.minStatus),
+      awardMiles:earned(s.dist,s.row.awardPct,s.row.minAward)
     });
   }
   return legs;
@@ -1084,7 +1097,7 @@ function updateFlightsNeeded(){
   const dist=parseFloat(document.getElementById("pl_dist").value)||0;
   const box=document.getElementById("planFlights");
   if(!dist){box.innerHTML=`<div class="note">Pick a route (or type a distance) to see how many flights you'd need.</div>`;return;}
-  const ow=Math.round(dist*row.statusPct/100), rt=ow*2;
+  const ow=earned(dist,row.statusPct,row.minStatus), rt=ow*2;
   if(remaining<=0){box.innerHTML=`<div class="big">${planGoalName()} already reached ✓</div>`;return;}
   box.innerHTML=`<div class="note">${a.name} · ${row.cabin} ${letter} · ${fmt(dist)} mi → ${fmt(ow)} status mi one-way (${fmt(rt)} round trip)</div>
     <div class="big">${Math.ceil(remaining/rt)} round trips</div>
@@ -1115,13 +1128,15 @@ function drawEditor(code){
   </div>
   <input id="t_note" value="${(a.note||"").replace(/"/g,'&quot;')}" placeholder="Notes / source">
   <div style="overflow-x:auto;margin-top:10px"><table id="t_rows"><thead><tr>
-    <th>Cabin</th><th>Fare classes (space/comma)</th><th>Status %</th><th>Award %</th><th></th></tr></thead><tbody>`;
+    <th>Cabin</th><th>Fare classes (space/comma)</th><th>Status %</th><th>Award %</th><th>Min status</th><th>Min award</th><th></th></tr></thead><tbody>`;
   a.rows.forEach((r,i)=>{
     html+=`<tr class="editrow">
       <td><input value="${r.cabin}" data-f="cabin" data-i="${i}"></td>
       <td><input value="${r.classes.join(' ')}" data-f="classes" data-i="${i}"></td>
-      <td><input type="number" value="${r.statusPct}" data-f="statusPct" data-i="${i}" style="width:80px"></td>
-      <td><input type="number" value="${r.awardPct}" data-f="awardPct" data-i="${i}" style="width:80px"></td>
+      <td><input type="number" value="${r.statusPct}" data-f="statusPct" data-i="${i}" style="width:70px"></td>
+      <td><input type="number" value="${r.awardPct}" data-f="awardPct" data-i="${i}" style="width:70px"></td>
+      <td><input type="number" value="${r.minStatus||0}" data-f="minStatus" data-i="${i}" style="width:70px"></td>
+      <td><input type="number" value="${r.minAward||0}" data-f="minAward" data-i="${i}" style="width:70px"></td>
       <td><button class="small danger" data-del="${i}">✕</button></td>
     </tr>`;
   });
@@ -1133,12 +1148,13 @@ function drawEditor(code){
   ed.innerHTML=html;
 
   ed.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{a.rows.splice(+b.dataset.del,1);stash(code,a);drawEditor(code);});
-  document.getElementById("t_addRow").onclick=()=>{a.rows.push({cabin:"Economy",classes:["X"],statusPct:50,awardPct:50});stash(code,a);drawEditor(code);};
+  document.getElementById("t_addRow").onclick=()=>{a.rows.push({cabin:"Economy",classes:["X"],statusPct:50,awardPct:50,minStatus:0,minAward:0});stash(code,a);drawEditor(code);};
   document.getElementById("t_save").onclick=()=>{
     const rows=[...ed.querySelectorAll("#t_rows tbody tr")].map(tr=>{
       const g=f=>tr.querySelector(`[data-f="${f}"]`).value;
       return {cabin:g("cabin"),classes:g("classes").split(/[ ,]+/).filter(Boolean).map(s=>s.toUpperCase()),
-        statusPct:parseFloat(g("statusPct"))||0,awardPct:parseFloat(g("awardPct"))||0};
+        statusPct:parseFloat(g("statusPct"))||0,awardPct:parseFloat(g("awardPct"))||0,
+        minStatus:parseFloat(g("minStatus"))||0,minAward:parseFloat(g("minAward"))||0};
     });
     const t={name:a.name,verified:document.getElementById("t_verified").checked,note:document.getElementById("t_note").value,rows};
     stash(code,t);
