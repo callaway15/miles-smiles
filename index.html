@@ -665,16 +665,46 @@ function genericRows(){return [
 PARTNERS.forEach(([code,name])=>{
   DEFAULT_TABLES[code]={name,verified:false,note:"Generic seed — confirm exact %% per booking class on the official Turkish Airlines page.",rows:genericRows()};
 });
-// Lufthansa: Miles&Smiles applies per-class MINIMUM miles on short flights. H seeded at 800 (per user); confirm all values + minimums on the official page.
-DEFAULT_TABLES["LH"]={name:"Lufthansa",verified:false,note:"Per-class minimum miles apply on short flights (earn = max(distance×%, minimum)). H seeded with min 800; confirm all %% and minimums on the official page.",rows:[
-  {cabin:"First",classes:["F","A"],statusPct:150,awardPct:150,minStatus:0,minAward:0},
-  {cabin:"Business",classes:["J","C","D","Z"],statusPct:150,awardPct:150,minStatus:0,minAward:0},
-  {cabin:"Business (discount)",classes:["P","I"],statusPct:125,awardPct:125,minStatus:0,minAward:0},
-  {cabin:"Economy (full)",classes:["Y","B"],statusPct:100,awardPct:100,minStatus:0,minAward:0},
-  {cabin:"Economy (H)",classes:["H"],statusPct:100,awardPct:100,minStatus:800,minAward:800},
-  {cabin:"Economy",classes:["M","U","Q","V","S","A","O","E"],statusPct:100,awardPct:100,minStatus:0,minAward:0},
-  {cabin:"Economy (discount)",classes:["W","T","L","K"],statusPct:50,awardPct:50,minStatus:0,minAward:0},
-  {cabin:"Economy (deep discount)",classes:["G","N","R"],statusPct:25,awardPct:25,minStatus:0,minAward:0}
+// Lufthansa Group — official Miles&Smiles earning (status = award here); earn = max(distance×%, minimum). Verified from the official tables.
+function R(cabin,classes,pct,min){return {cabin,classes,statusPct:pct,awardPct:pct,minStatus:min,minAward:min};}
+DEFAULT_TABLES["LH"]={name:"Lufthansa",verified:true,note:"Official Miles&Smiles table. Earn = max(distance×%, minimum). P/O/I/R/X/K/L are not eligible for accrual.",rows:[
+  R("First",["A","F"],200,1600),
+  R("Business",["C","D","J"],150,1200),
+  R("Business",["Z"],135,1000),
+  R("Premium Economy",["G","E"],125,1000),
+  R("Premium Economy",["N"],100,800),
+  R("Economy",["B","Y"],125,1000),
+  R("Economy",["H","M","U"],100,800),
+  R("Economy",["Q","S","W","V"],50,400),
+  R("Economy",["T"],25,200),
+  R("Not eligible (no miles)",["O","I","R","X","K","L","P"],0,0)
+]};
+DEFAULT_TABLES["OS"]={name:"Austrian Airlines",verified:true,note:"Official Miles&Smiles table. Earn = max(distance×%, minimum).",rows:[
+  R("Business",["C","D","J","Z","A"],150,1200),
+  R("Business",["P"],100,800),
+  R("Premium Economy",["G","E"],135,1000),
+  R("Premium Economy",["N"],110,800),
+  R("Economy",["Y","B","M","U"],100,800),
+  R("Economy",["Q","W","V","H","O"],50,400)
+]};
+DEFAULT_TABLES["LX"]={name:"SWISS",verified:true,note:"Official Miles&Smiles table. Earn = max(distance×%, minimum).",rows:[
+  R("First",["A","F"],200,1600),
+  R("Business",["C","D","Z","J"],150,1200),
+  R("Business",["P"],100,800),
+  R("Economy",["Y","B"],125,1000),
+  R("Economy",["M","U","H"],100,800),
+  R("Economy",["Q","V","W","S"],75,600),
+  R("Economy",["T"],50,400),
+  R("Economy",["K"],25,200)
+]};
+DEFAULT_TABLES["AC"]={name:"Air Canada",verified:true,note:"Official Miles&Smiles table (non-branded fares). W differs: International 100%/min 500 vs Domestic 50%/min 250 — pick the matching W. Branded fares may differ.",rows:[
+  R("Business",["J","C","Z","D","P"],150,750),
+  R("Premium Economy",["O","E","A"],125,625),
+  R("Economy",["Y","B","M","U","H","Q","V"],100,500),
+  R("Economy — W (International)",["W"],100,500),
+  R("Economy — W (Domestic)",["W"],50,250),
+  R("Economy",["S","T","L","G"],50,250),
+  R("Economy",["K"],25,125)
 ]};
 
 /* ============================================================
@@ -758,6 +788,7 @@ function tier(statusMiles,flights){
    NAV
    ============================================================ */
 function go(tab){
+  editingFlight=null;
   document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("active",b.dataset.tab===tab));
   ["dashboard","add","log","compare","planner","tables","backup"].forEach(t=>{
     document.getElementById("tab-"+t).classList.toggle("hide",t!==tab);
@@ -975,6 +1006,7 @@ function renderTripDraft(){
 /* ============================================================
    FLIGHT LOG
    ============================================================ */
+let editingFlight=null;
 function renderLog(){
   const p=activeProfile();
   document.getElementById("logTitle").innerHTML=`Flight log · ${p.name}`;
@@ -992,17 +1024,35 @@ function renderLog(){
       <th class="right">Status mi</th><th class="right">Award mi</th><th class="right">In window</th><th></th></tr></thead><tbody>`;
     sorted.forEach(f=>{
       const idx=p.flights.indexOf(f);
-      html+=`<tr>
-        <td>${f.date}</td>
-        <td>${(airline(f.airlineCode)||{name:f.airlineCode}).name}<div class="muted" style="font-size:11px">${f.airlineCode}</div></td>
-        <td>${f.from||"?"} → ${f.to||"?"}</td>
-        <td>${f.cabin} · ${f.fareClass}</td>
-        <td class="right">${fmt(f.distance)}</td>
-        <td class="right"><b>${fmt(f.statusMiles)}</b></td>
-        <td class="right">${fmt(f.awardMiles||0)}</td>
-        <td class="right">${inWindow(f.date,w)?"✓":"—"}</td>
-        <td class="right"><button class="small danger" onclick="delFlight(${idx})">✕</button></td>
-      </tr>`;
+      if(idx===editingFlight){
+        html+=`<tr><td colspan="9" style="background:rgba(58,109,240,.06)">
+          <div class="grid3">
+            <div><label>Date</label><input type="date" id="ef_date" value="${f.date}"></div>
+            <div><label>Airline</label><select id="ef_airline"></select></div>
+            <div><label>Cabin &amp; booking class</label><select id="ef_class"></select></div>
+            <div><label>From</label><input list="airportList" id="ef_from" value="${f.from||""}" autocomplete="off"></div>
+            <div><label>To</label><input list="airportList" id="ef_to" value="${f.to||""}" autocomplete="off"></div>
+            <div><label>Distance (mi)</label><input type="number" id="ef_dist" value="${f.distance}" min="0"></div>
+          </div>
+          <div class="inline" style="margin-top:8px;flex-wrap:wrap">
+            <button class="small" onclick="saveFlightEdit()">💾 Save</button>
+            <button class="small secondary" onclick="cancelEdit()">Cancel</button>
+            <span class="note" id="ef_preview"></span>
+          </div>
+        </td></tr>`;
+      } else {
+        html+=`<tr>
+          <td>${f.date}</td>
+          <td>${(airline(f.airlineCode)||{name:f.airlineCode}).name}<div class="muted" style="font-size:11px">${f.airlineCode}</div></td>
+          <td>${f.from||"?"} → ${f.to||"?"}</td>
+          <td>${f.cabin} · ${f.fareClass}</td>
+          <td class="right">${fmt(f.distance)}</td>
+          <td class="right"><b>${fmt(f.statusMiles)}</b></td>
+          <td class="right">${fmt(f.awardMiles||0)}</td>
+          <td class="right">${inWindow(f.date,w)?"✓":"—"}</td>
+          <td class="right" style="white-space:nowrap"><button class="small secondary" onclick="editFlight(${idx})">✎</button> <button class="small danger" onclick="delFlight(${idx})">✕</button></td>
+        </tr>`;
+      }
     });
     const sm=statusMilesInWindow(p);
     html+=`</tbody><tfoot><tr><th colspan="5" class="right">Totals (this membership year)</th>
@@ -1011,8 +1061,54 @@ function renderLog(){
   document.getElementById("logTable").innerHTML=html;
   const ms=document.getElementById("memStart");
   if(ms)ms.onchange=()=>{p.membershipStart=ms.value;save();renderLog();};
+  if(editingFlight!==null && p.flights[editingFlight]){
+    const f=p.flights[editingFlight];
+    const aSel=document.getElementById("ef_airline");
+    fillAirlineSelect(aSel); aSel.value=f.airlineCode;
+    fillClassEl(aSel.value,document.getElementById("ef_class"));
+    selectEditClass(f);
+    aSel.onchange=()=>{fillClassEl(aSel.value,document.getElementById("ef_class"));efPreview();};
+    ["ef_from","ef_to"].forEach(id=>document.getElementById(id).addEventListener("input",()=>{efAutoDist();efPreview();}));
+    ["ef_dist","ef_class","ef_date"].forEach(id=>document.getElementById(id).addEventListener("input",efPreview));
+    efPreview();
+  }
 }
-function delFlight(i){const p=activeProfile();if(confirm("Delete this flight?")){p.flights.splice(i,1);save();renderLog();}}
+function selectEditClass(f){
+  const sel=document.getElementById("ef_class");
+  const a=airline(document.getElementById("ef_airline").value);
+  let chosen=null,fallback=null;
+  [...sel.options].forEach(o=>{
+    const [ri,letter]=o.value.split("|");const row=a.rows[+ri];
+    if(letter===f.fareClass){if(row&&row.cabin===f.cabin&&!chosen)chosen=o.value;if(!fallback)fallback=o.value;}
+  });
+  sel.value=chosen||fallback||sel.value;
+}
+function efAutoDist(){
+  const a=airportByCode(document.getElementById("ef_from").value),b=airportByCode(document.getElementById("ef_to").value);
+  if(a&&b)document.getElementById("ef_dist").value=Math.round(haversine(a,b));
+}
+function efCompute(){
+  const a=airline(document.getElementById("ef_airline").value);
+  const [ri,letter]=(document.getElementById("ef_class").value||"0|").split("|");
+  const row=a.rows[+ri]||a.rows[0];
+  const dist=parseFloat(document.getElementById("ef_dist").value)||0;
+  return {row,letter,dist,status:earned(dist,row.statusPct,row.minStatus),award:earned(dist,row.awardPct,row.minAward)};
+}
+function efPreview(){const c=efCompute();const el=document.getElementById("ef_preview");if(el)el.textContent=`→ ${fmt(c.status)} status / ${fmt(c.award)} award miles`;}
+function editFlight(i){editingFlight=i;renderLog();}
+function cancelEdit(){editingFlight=null;renderLog();}
+function saveFlightEdit(){
+  const p=activeProfile();const i=editingFlight;if(i==null||!p.flights[i])return;
+  const c=efCompute();const f=p.flights[i];
+  f.date=document.getElementById("ef_date").value||f.date;
+  f.airlineCode=document.getElementById("ef_airline").value;
+  f.from=document.getElementById("ef_from").value.toUpperCase().trim();
+  f.to=document.getElementById("ef_to").value.toUpperCase().trim();
+  f.distance=Math.round(c.dist);f.cabin=c.row.cabin;f.fareClass=c.letter;
+  f.statusMiles=c.status;f.awardMiles=c.award;
+  editingFlight=null;save();renderLog();
+}
+function delFlight(i){const p=activeProfile();if(confirm("Delete this flight?")){if(editingFlight===i)editingFlight=null;p.flights.splice(i,1);save();renderLog();}}
 
 /* ============================================================
    COMPARE
