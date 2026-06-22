@@ -91,6 +91,8 @@
     <button data-tab="log">Flight log</button>
     <button data-tab="compare">Compare</button>
     <button data-tab="planner">Gold planner</button>
+    <button data-tab="stats">Travel stats</button>
+    <button data-tab="deals">Deals</button>
     <button data-tab="tables">Earning tables</button>
     <button data-tab="backup">Backup &amp; settings</button>
   </div>
@@ -215,6 +217,46 @@
         <div><label>Distance (override)</label><input type="number" id="pl_dist" min="0" placeholder="auto"></div>
       </div>
       <div class="preview" id="planFlights" style="margin-top:12px"></div>
+    </div>
+  </section>
+
+  <!-- STATS -->
+  <section id="tab-stats" class="hide">
+    <div class="card">
+      <h2 id="statsTitle">Travel stats</h2>
+      <div id="statsCards" class="grid3"></div>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <h2>Around the world 🌍</h2>
+      <div id="globeViz"></div>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <h2>Miles by month</h2>
+      <div id="milesChart"></div>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <h2>Fun facts</h2>
+      <ul id="funFacts" class="note" style="line-height:1.9;padding-left:18px"></ul>
+    </div>
+  </section>
+
+  <!-- DEALS -->
+  <section id="tab-deals" class="hide">
+    <div class="card">
+      <h2>Flight deals <span class="muted">via travel-dealz.de</span></h2>
+      <div class="inline" style="flex-wrap:wrap;margin-bottom:8px">
+        <select id="dealFilter" style="max-width:240px">
+          <option value="https://travel-dealz.de/?s=Business+Class&feed=rss2">Business Class</option>
+          <option value="https://travel-dealz.de/?s=First+Class&feed=rss2">First Class</option>
+          <option value="https://travel-dealz.de/?s=Star+Alliance&feed=rss2">Star Alliance</option>
+          <option value="https://travel-dealz.de/?s=Miles+%26+More&feed=rss2">Miles &amp; More / award deals</option>
+          <option value="https://travel-dealz.de/feed/">All latest deals</option>
+        </select>
+        <button class="small" id="dealRefresh">↻ Refresh</button>
+        <a class="tag" href="https://travel-dealz.de/" target="_blank" rel="noopener">Open travel-dealz.de ↗</a>
+      </div>
+      <div class="banner">Live deals are pulled from travel-dealz.de through a public proxy, so this page needs internet. The last results are cached so you still see something offline. All prices &amp; links belong to travel-dealz.de.</div>
+      <div id="dealsBody"></div>
     </div>
   </section>
 
@@ -790,7 +832,7 @@ function tier(statusMiles,flights){
 function go(tab){
   editingFlight=null;
   document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("active",b.dataset.tab===tab));
-  ["dashboard","add","log","compare","planner","tables","backup"].forEach(t=>{
+  ["dashboard","add","log","compare","planner","stats","deals","tables","backup"].forEach(t=>{
     document.getElementById("tab-"+t).classList.toggle("hide",t!==tab);
   });
   if(tab==="dashboard")renderDashboard();
@@ -798,6 +840,8 @@ function go(tab){
   if(tab==="log")renderLog();
   if(tab==="compare")renderCompare();
   if(tab==="planner")renderPlanner();
+  if(tab==="stats")renderStats();
+  if(tab==="deals")renderDeals();
   if(tab==="tables")renderTables();
   if(tab==="backup")renderBackup();
 }
@@ -1198,6 +1242,124 @@ function updateFlightsNeeded(){
   box.innerHTML=`<div class="note">${a.name} · ${row.cabin} ${letter} · ${fmt(dist)} mi → ${fmt(ow)} status mi one-way (${fmt(rt)} round trip)</div>
     <div class="big">${Math.ceil(remaining/rt)} round trips</div>
     <div class="note">or ${Math.ceil(remaining/ow)} one-way flights to cover the remaining ${fmt(remaining)} status miles to ${planGoalName()}.</div>`;
+}
+
+/* ============================================================
+   TRAVEL STATS & FUN FACTS
+   ============================================================ */
+const EARTH_MI=24901, MOON_MI=238855;
+function renderStats(){
+  const p=activeProfile();
+  document.getElementById("statsTitle").innerHTML=`Travel stats · ${p.name}`;
+  const fl=p.flights;
+  const dist=fl.reduce((s,f)=>s+(f.distance||0),0);
+  const status=fl.reduce((s,f)=>s+(f.statusMiles||0),0);
+  const award=fl.reduce((s,f)=>s+(f.awardMiles||0),0);
+  const laps=dist/EARTH_MI, hours=dist/500;
+  const airports=new Set(), countries=new Set();
+  fl.forEach(f=>[f.from,f.to].forEach(c=>{if(c){airports.add(c);const a=airportByCode(c);if(a)countries.add(a[3]);}}));
+  const byAir={};fl.forEach(f=>byAir[f.airlineCode]=(byAir[f.airlineCode]||0)+1);
+  const favAir=Object.entries(byAir).sort((a,b)=>b[1]-a[1])[0];
+  const longest=fl.reduce((m,f)=>(f.distance||0)>((m&&m.distance)||0)?f:m,null);
+
+  const cards=[
+    ["Flights",fmt(fl.length)],
+    ["Miles flown",fmt(dist)],
+    ["Times around the 🌍",laps.toFixed(2)],
+    ["Airports",airports.size],
+    ["Countries",countries.size],
+    ["Hours in the air",fmt(hours)],
+    ["Status miles",fmt(status)],
+    ["Award miles",fmt(award)],
+    ["Top airline",favAir?`${(airline(favAir[0])||{name:favAir[0]}).name.split(/[ /]/)[0]} (${favAir[1]})`:"—"]
+  ];
+  document.getElementById("statsCards").innerHTML=cards.map(([l,n])=>
+    `<div class="stat"><div class="n">${n}</div><div class="l">${l}</div></div>`).join("");
+
+  // globe visualisation
+  const full=Math.floor(laps);
+  let globes="";for(let i=0;i<Math.min(full,60);i++)globes+="🌍";
+  const partial=(laps-full)*100;
+  document.getElementById("globeViz").innerHTML=
+    `<div style="font-size:42px;font-weight:800;color:var(--gold);line-height:1">${laps.toFixed(2)}×</div>
+     <div class="note">times around the Earth (1 lap = ${fmt(EARTH_MI)} mi)</div>
+     <div style="font-size:22px;line-height:1.5;margin:10px 0;word-break:break-word">${globes||'<span class="muted">log a flight to start your first lap…</span>'}</div>
+     <div class="bar"><div class="fill" style="width:${partial}%"></div></div>
+     <div class="note">${fmt((laps-full)*EARTH_MI)} mi into lap ${full+1}</div>`;
+
+  // miles by month
+  const months={};fl.forEach(f=>{const m=(f.date||"").slice(0,7);if(m)months[m]=(months[m]||0)+(f.distance||0);});
+  const keys=Object.keys(months).sort();
+  const max=Math.max(1,...keys.map(k=>months[k]));
+  document.getElementById("milesChart").innerHTML = keys.length?
+    keys.map(k=>`<div style="display:flex;align-items:center;gap:8px;margin:5px 0">
+      <span class="muted" style="width:62px;font-size:12px">${k}</span>
+      <div style="flex:1;background:var(--card2);border-radius:6px;overflow:hidden"><div style="height:16px;width:${months[k]/max*100}%;background:linear-gradient(90deg,#3a6df0,var(--gold))"></div></div>
+      <span style="width:64px;text-align:right;font-size:12px">${fmt(months[k])}</span>
+    </div>`).join("") : `<p class="muted">No flights logged yet.</p>`;
+
+  // fun facts
+  const facts=[];
+  if(dist>0){
+    facts.push(`✈️ You've flown <b>${fmt(dist)} miles</b> — that's <b>${laps.toFixed(2)}×</b> around the Earth.`);
+    facts.push(`🌙 ${(dist/MOON_MI*100).toFixed(1)}% of the way to the Moon (${fmt(MOON_MI)} mi).`);
+    facts.push(`⏱️ Roughly <b>${fmt(hours)} hours</b> airborne at ~500 mph.`);
+    facts.push(`🌍 <b>${countries.size}</b> countries across <b>${airports.size}</b> airports.`);
+    if(longest&&longest.distance)facts.push(`📏 Longest hop: <b>${longest.from}→${longest.to}</b> (${fmt(longest.distance)} mi).`);
+  } else {
+    facts.push("Log some flights and your fun facts will appear here.");
+  }
+  document.getElementById("funFacts").innerHTML=facts.map(f=>`<li>${f}</li>`).join("");
+}
+
+/* ============================================================
+   DEALS (travel-dealz.de live feed via CORS proxy)
+   ============================================================ */
+const DEAL_PROXIES=[
+  u=>`https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(u)}`,
+  u=>`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+  u=>`https://corsproxy.io/?url=${encodeURIComponent(u)}`
+];
+async function fetchFeedText(url){
+  for(const mk of DEAL_PROXIES){
+    try{const r=await fetch(mk(url));if(r.ok){const t=await r.text();if(t&&t.indexOf("<item")>-1)return t;}}catch(e){}
+  }
+  return null;
+}
+function txt(it,tag){const e=it.querySelector(tag);return e?e.textContent:"";}
+function dealsHTML(items){
+  return items.map(d=>{
+    const date=d.date?new Date(d.date).toLocaleDateString():"";
+    return `<a href="${d.link}" target="_blank" rel="noopener" style="text-decoration:none;color:inherit;display:block">
+      <div class="stat" style="margin-bottom:8px">
+        <div style="font-weight:700;color:#8fb0ff">${d.title}</div>
+        ${d.desc?`<div class="note" style="margin-top:4px">${d.desc}</div>`:""}
+        <div class="muted" style="font-size:11px;margin-top:4px">${date} · travel-dealz.de ↗</div>
+      </div></a>`;
+  }).join("");
+}
+function renderDeals(){
+  const sel=document.getElementById("dealFilter");
+  document.getElementById("dealRefresh").onclick=()=>loadDeals(sel.value);
+  sel.onchange=()=>loadDeals(sel.value);
+  loadDeals(sel.value);
+}
+async function loadDeals(url){
+  const body=document.getElementById("dealsBody");
+  body.innerHTML=`<p class="muted">Loading deals…</p>`;
+  const xml=await fetchFeedText(url);
+  if(!xml){
+    let cached=null;try{cached=JSON.parse(localStorage.getItem("dealsCache")||"null");}catch(e){}
+    body.innerHTML=`<div class="banner">Couldn't reach travel-dealz.de right now (no internet or proxy busy). ${cached?"Showing the last saved deals below.":""} <a href="https://travel-dealz.de/" target="_blank" rel="noopener">Open the site →</a></div>`+(cached?dealsHTML(cached):"");
+    return;
+  }
+  const doc=new DOMParser().parseFromString(xml,"text/xml");
+  const items=[...doc.querySelectorAll("item")].slice(0,25).map(it=>({
+    title:txt(it,"title"), link:txt(it,"link"), date:txt(it,"pubDate"),
+    desc:txt(it,"description").replace(/<[^>]+>/g,"").replace(/\s+/g," ").trim().slice(0,180)
+  }));
+  if(items.length)localStorage.setItem("dealsCache",JSON.stringify(items));
+  body.innerHTML=items.length?dealsHTML(items):`<p class="muted">No deals found for this filter.</p>`;
 }
 
 /* ============================================================
